@@ -11,7 +11,7 @@ Automatyczne układanie miesięcznych grafików dyżurowych (Google OR-Tools CP-
 | 3 | Funkcja celu (godziny, liczba dyżurów, preferencje, kolejne 5 h, weekendy, 16 h), limity, FIX/FORBID | gotowy |
 | 4 | Historia: odpoczynek na granicy miesięcy, kolejne 5 h, FIX z następnego miesiąca, równoważenie między miesiącami | gotowy |
 | 5 | Walidator grafiku, raporty, eksport CSV/XLSX/TXT, CLI | gotowy |
-| 6 | Testy końcowe, dokumentacja, demo | do zrobienia |
+| 6 | Diagnostyka INFEASIBLE (assumptions), testy końcowe, dokumentacja, demo | gotowy |
 
 ## Instalacja
 
@@ -55,3 +55,18 @@ Preferences), `optimization_report.txt`. Istniejące pliki wynikowe nie są nadp
 `--overwrite`. Przed zapisem grafik przechodzi niezależny walidator (`src/schedule_validator.py`);
 przy błędach twardych program kończy się kodem 4 i raport oznacza grafik jako niezatwierdzalny.
 Kody wyjścia: 0 OK, 2 błędne dane, 3 brak rozwiązania, 4 błędy w grafiku, 5 pliki już istnieją.
+
+## Diagnostyka braku rozwiązania
+
+Przy statusie INFEASIBLE `src/diagnostics.py` buduje model z literałami-asumpcjami (obsada dnia,
+odpoczynek i limity pracownika) i wypisuje rdzeń sprzeczności z solvera. Rdzeń jest wystarczający,
+ale niekoniecznie minimalny; sprzeczności wynikające tylko z kwalifikacji/blokad wychwytuje
+wcześniej walidacja danych.
+
+## Demo
+
+    python tools/generate_sample_data.py
+    python main.py --year 2026 --month 12 --time-limit 60 --output-dir output --overwrite
+
+Dane demo: 56 aktywnych pracowników, 9 pionów. Przy ograniczonym limicie czasu solver zwykle
+kończy ze statusem FEASIBLE (raport to jasno zaznacza); dłuższy limit i więcej wątków poprawia wynik.

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from src.config import ConfigError, load_settings
 from src.exporter import OutputExistsError, existing_outputs, export_all
+from src.diagnostics import explain_infeasibility
 from src.loader import load_problem_data
 from src.models import DataLoadError, ValidationReport
 from src.optimizer import solve
@@ -59,7 +60,10 @@ def run(args: argparse.Namespace) -> int:
     result = solve(data, settings)
     log.info("Status solvera: %s (%.1f s)", result.status, result.wall_time_seconds)
     if not result.has_solution:
-        log.error("Brak grafiku (status %s). Sprawdź ograniczenia: odpoczynek po 16 h, limity, blokady.", result.status)
+        log.error("Brak grafiku (status %s).", result.status)
+        if result.status == "INFEASIBLE":
+            for message in explain_infeasibility(data, settings):
+                log.error("%s", message)
         return EXIT_NO_SOLUTION
 
     assignments = [(d, p, e) for (d, p), e in result.assignments.items()]

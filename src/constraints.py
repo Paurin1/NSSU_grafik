@@ -15,6 +15,23 @@ from .preprocessing import ProblemContext, Slot
 
 VarKey = tuple[str, date, str]  # (employee_id, day, post_id)
 
+# Diagnostic mode: constraint groups are guarded by literals (name -> literal),
+# which the solver can report in an infeasibility core.
+Guards = dict[str, cp_model.IntVar]
+
+
+def _guard(model: cp_model.CpModel, guards: Guards | None, name: str) -> cp_model.IntVar | None:
+    if guards is None:
+        return None
+    if name not in guards:
+        guards[name] = model.new_bool_var(f"guard_{name}")
+    return guards[name]
+
+
+def _enforce(constraint: cp_model.Constraint, literal: cp_model.IntVar | None) -> None:
+    if literal is not None:
+        constraint.only_enforce_if(literal)
+
 
 @dataclass
 class ModelVariables:
@@ -39,7 +56,7 @@ def create_variables(
 
 
 def add_full_coverage(
-    model: cp_model.CpModel, ctx: ProblemContext, mv: ModelVariables
+    model: cp_model.CpModel, ctx: ProblemContext, mv: ModelVariables, guards: Guards | None = None
 ) -> None:
     """Every active post is staffed by exactly one person every day."""
     by_slot: dict[Slot, list[cp_model.IntVar]] = {}
@@ -48,10 +65,8 @@ def add_full_coverage(
     for day in ctx.days:
         for post_id in ctx.active_post_ids:
             slot_vars = by_slot.get((day, post_id), [])
-            if slot_vars:
-                model.add_exactly_one(slot_vars)
-            else:
-                model.add_bool_or([])  # empty clause = infeasible, reported by validation
+            literal = _guard(model, guards, f"obsada:{day.isoformat()}")
+            _enforce(model.add(sum(slot_vars) == 1), literal)
 
 
 def add_one_shift_per_day(
@@ -67,7 +82,7 @@ def add_one_shift_per_day(
 
 
 def add_rest_rules(
-    model: cp_model.CpModel, ctx: ProblemContext, mv: ModelVariables
+    model: cp_model.CpModel, ctx: ProblemContext, mv: ModelVariables, guards: Guards | None = None
 ) -> None:
     """After a shift type with rest requirement, no duty on the following N days.
 
@@ -88,11 +103,12 @@ def add_rest_rules(
         for offset in range(1, rest_days + 1):
             later = day_vars.get((employee_id, day + timedelta(days=offset)), [])
             if later:
-                model.add(sum(starters) + sum(later) <= 1)
+                literal = _guard(model, guards, f"odpoczynek:{employee_id}")
+                _enforce(model.add(sum(starters) + sum(later) <= 1), literal)
 
 
 def add_employee_limits(
-    model: cp_model.CpModel, ctx: ProblemContext, mv: ModelVariables
+    model: cp_model.CpModel, ctx: ProblemContext, mv: ModelVariables, guards: Guards | None = None
 ) -> None:
     """Explicitly set min/max shift limits (total, long, short) are hard constraints."""
     classes = ctx.settings.shift_classes
@@ -112,16 +128,17 @@ def add_employee_limits(
             total = sum(var for stype, var in entries if belongs(stype))
             minimum = getattr(employee, f"min{suffix}_shifts" if suffix else "min_shifts")
             maximum = getattr(employee, f"max{suffix}_shifts" if suffix else "max_shifts")
+            literal = _guard(model, guards, f"limity:{employee_id}")
             if minimum is not None:
-                model.add(total >= minimum)
+                _enforce(model.add(total >= minimum), literal)
             if maximum is not None:
-                model.add(total <= maximum)
+                _enforce(model.add(total <= maximum), literal)
 
 
 def add_hard_constraints(
-    model: cp_model.CpModel, ctx: ProblemContext, mv: ModelVariables
+    model: cp_model.CpModel, ctx: ProblemContext, mv: ModelVariables, guards: Guards | None = None
 ) -> None:
-    add_full_coverage(model, ctx, mv)
+    add_full_coverage(model, ctx, mv, guards)
     add_one_shift_per_day(model, ctx, mv)
-    add_rest_rules(model, ctx, mv)
-    add_employee_limits(model, ctx, mv)
+    add_rest_rules(model, ctx, mv, guards)
+    add_employee_limits(model, ctx, mv, guards)
