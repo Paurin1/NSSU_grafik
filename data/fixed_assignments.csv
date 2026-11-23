@@ -1,0 +1,3 @@
+employee_id;date;post_id;action
+E001;2026-12-10;P1;FIX
+E002;2026-12-11;P2;FORBID

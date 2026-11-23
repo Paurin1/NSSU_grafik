@@ -1,0 +1,50 @@
+year: 2026
+month: 12
+
+csv_delimiter: ";"
+
+solver:
+  time_limit_seconds: 120
+  workers: 8
+  random_seed: 1
+
+# Initial weights - tunable parameters, not mathematically optimal values.
+weights:
+  hours_balance: 10
+  shift_count_balance: 5
+  preferences: 8
+  consecutive_5h: 3
+  weekend_balance: 4
+  long_shift_balance: 0
+  short_shift_balance: 0
+
+# Which shift types are "long" / "short" for min_/max_long_/short_shifts limits.
+shift_classes:
+  long_shift_type: "16"
+  short_shift_type: "5"
+
+# Duty-free calendar days required after a shift of the given type.
+rest:
+  rest_days_after_shift_type:
+    "16": 1
+
+balancing:
+  balance_hours: true
+  balance_shift_count: true
+  balance_long_shifts: true
+  balance_short_shifts: false
+  use_history: true
+
+weekends:
+  saturday_weight: 1
+  sunday_weight: 1
+  holiday_weight: 1
+  holidays:
+    - 2026-12-25
+    - 2026-12-26
+
+consecutive_short:
+  shift_type: "5"
+
+preferences:
+  mismatch_penalty: 1
