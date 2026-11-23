@@ -10,7 +10,8 @@ Automatyczne układanie miesięcznych grafików dyżurowych (Google OR-Tools CP-
 | 2 | Model bazowy CP-SAT (obsada, kwalifikacje, niedostępność, 1 dyżur/dzień, odpoczynek) | gotowy |
 | 3 | Funkcja celu (godziny, liczba dyżurów, preferencje, kolejne 5 h, weekendy, 16 h), limity, FIX/FORBID | gotowy |
 | 4 | Historia: odpoczynek na granicy miesięcy, kolejne 5 h, FIX z następnego miesiąca, równoważenie między miesiącami | gotowy |
-| 5–6 | Raporty, CLI, walidator grafiku | do zrobienia |
+| 5 | Walidator grafiku, raporty, eksport CSV/XLSX/TXT, CLI | gotowy |
+| 6 | Testy końcowe, dokumentacja, demo | do zrobienia |
 
 ## Instalacja
 
@@ -43,3 +44,14 @@ cel godzinowy osoby, która w historii pracowała więcej niż średnia, jest ob
 korekt = 0), a bilans dyżurów 16 h i weekendów uwzględnia historię. Wyłączenie:
 `balancing.use_history: false`. Korekta ma sens, gdy historia obejmuje pełny miesiąc;
 krótka historia (np. 3 dni) tylko niewiele przesuwa cele.
+
+## Użycie
+
+    python main.py --year 2026 --month 12 [--config config/settings.yaml] [--data-dir data]
+                   [--output-dir output] [--time-limit 120] [--overwrite] [--verbose]
+
+Wyniki: `schedule.csv`, `schedule.xlsx` (arkusze Schedule, Employees, Statistics, Validation,
+Preferences), `optimization_report.txt`. Istniejące pliki wynikowe nie są nadpisywane bez
+`--overwrite`. Przed zapisem grafik przechodzi niezależny walidator (`src/schedule_validator.py`);
+przy błędach twardych program kończy się kodem 4 i raport oznacza grafik jako niezatwierdzalny.
+Kody wyjścia: 0 OK, 2 błędne dane, 3 brak rozwiązania, 4 błędy w grafiku, 5 pliki już istnieją.
